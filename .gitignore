@@ -1,0 +1,8 @@
+.gocache/
+dist/
+build/
+__pycache__/
+.venv/
+release/
+vendor/official/
+vendor/installer.exe

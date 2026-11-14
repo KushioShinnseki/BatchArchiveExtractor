@@ -1,0 +1,41 @@
+name: Manual release cleanup
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'retain: 每项目每天只保留最新版；range: 删除指定日期范围（含首尾）'
+        type: choice
+        options: [retain, range]
+        default: retain
+      start_date:
+        description: 'range 模式开始日期 YYYY-MM-DD（Asia/Shanghai）'
+        type: string
+      end_date:
+        description: 'range 模式结束日期 YYYY-MM-DD（Asia/Shanghai）'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show plan, then delete selected releases and tags
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CLEANUP_MODE: ${{ inputs.mode }}
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+        with:
+          script: |
+            await require('./.github/scripts/cleanup.cjs').execute({github, context, core});
