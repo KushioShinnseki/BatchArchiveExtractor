@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"testing"
 	"unsafe"
@@ -47,7 +46,20 @@ func TestModernFolderDialog(t *testing.T) {
 	}
 	defer item.release()
 	got, err := shellItemPath(item)
-	if err != nil || !strings.EqualFold(got, directory) {
-		t.Fatalf("initial folder round-trip: got %q, want %q, error %v", got, directory, err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The Shell canonicalizes 8.3 names (e.g. RUNNER~1) to their long names.
+	// Check directory identity rather than comparing equivalent path spellings.
+	selectedInfo, err := os.Stat(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedInfo, err := os.Stat(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !selectedInfo.IsDir() || !os.SameFile(selectedInfo, expectedInfo) {
+		t.Fatalf("initial folder round-trip selected a different directory: got %q, want %q", got, directory)
 	}
 }
