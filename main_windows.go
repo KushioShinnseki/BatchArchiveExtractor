@@ -61,12 +61,6 @@ type windowClass struct {
 	Instance, Icon, Cursor, Background uintptr
 	MenuName, ClassName                *uint16
 }
-type browseInfo struct {
-	Owner, Root, DisplayName, Title uintptr
-	Flags                           uint32
-	Callback, Param                 uintptr
-	Image                           int32
-}
 type UI struct {
 	Window, Font, Instance uintptr
 	Controls               map[string]uintptr
@@ -162,18 +156,13 @@ func (u *UI) setRunning(running bool) {
 	enableWindow.Call(u.Controls["report"], report)
 }
 func (u *UI) choose() {
-	buf := make([]uint16, 32768)
-	title := wide("选择需要递归解压的目录")
-	bi := browseInfo{Owner: u.Window, Title: uintptr(unsafe.Pointer(title)), DisplayName: uintptr(unsafe.Pointer(&buf[0])), Flags: 0x41}
-	item, _, _ := shell32.NewProc("SHBrowseForFolderW").Call(uintptr(unsafe.Pointer(&bi)))
-	runtime.KeepAlive(title)
-	if item == 0 {
+	selected, err := chooseFolder(u.Window, getText(u.Controls["path"]))
+	if err != nil {
+		message(u.Window, "打开目录选择窗口失败："+err.Error())
 		return
 	}
-	defer ole32.NewProc("CoTaskMemFree").Call(item)
-	ok, _, _ := shell32.NewProc("SHGetPathFromIDListW").Call(item, uintptr(unsafe.Pointer(&buf[0])))
-	if ok != 0 {
-		callText(u.Controls["path"], syscall.UTF16ToString(buf))
+	if selected != "" {
+		callText(u.Controls["path"], selected)
 	}
 }
 func (u *UI) start() {
